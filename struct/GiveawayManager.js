@@ -168,14 +168,14 @@ class GiveawayManager {
         } else if (giveaway.reqRole) {
             let guild = message.guild
             let member = await guild.members.fetch(user.id)
-            if (!member.roles.cache.has(giveaway.reqRole.id)) {
+            if (!member.roles.cache.has(giveaway.reqRole)) {
                 passed = false
                 reason = "role"
             }
         } else if (giveaway.reqMessage) {
             let userMessages = messages.get(user.id)
 
-            if (userMessages < giveaway.reqMessages) passed = false
+            if (userMessages < giveaway.reqMessage) passed = false
             reason = "messages"
         }
 
@@ -186,6 +186,45 @@ class GiveawayManager {
             user.send("ENTRY ACCEPTED")
         }
     }
+async manageReaction(reaction, user) {
+        let {
+            message
+        } = reaction
+        let giveaway = this.giveaways.get(`giveaways_${message.guild.id}_${message.id}`)
+        if (!giveaway) return;
+        let passed = true
+        let reason = undefined
+        if (giveaway.reqGuild) {
+            let guild = this.client.guilds.cache.get(giveaway.reqGuild)
+            if (!guild) return;
+            let member = await guild.members.fetch(user.id)
+            if (!member) {
+                passed = false
+                reason = "guild"
+            }
+
+        } else if (giveaway.reqRole) {
+            let guild = message.guild
+            let member = await guild.members.fetch(user.id)
+            if (!member.roles.cache.has(giveaway.reqRole)) {
+                passed = false
+                reason = "role"
+            }
+        } else if (giveaway.reqMessage) {
+            let userMessages = messages.get(user.id)
+
+            if (userMessages < giveaway.reqMessage) passed = false
+            reason = "messages"
+        }
+
+        if (!passed) {
+            await reaction.users.remove(user)
+            user.send(`ENTRY DENIED!\nMissing requirement: ${reason}`)
+        } else {
+            user.send("ENTRY ACCEPTED")
+        }
+    }
+
 
     /**
      * 
