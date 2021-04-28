@@ -27,17 +27,17 @@ const Giveaway = require('./Giveaway'),
         fetchAll: true
     })
 defaultOptions = {
-        reaction: "🎉",
+        reaction: `🎊`,
         winMsg: `Congratulations {winner}! You won {prize}!\n{url}`,
         notEnoughMsg: `There weren't enough participants for me to decide a winner!\n{url}`,
         startEmbed: {},
         endEmbed: {},
         embed: {
-            startMsg: "🎉 **Giveaway** 🎉",
-            startEmbedColor: "BLUE",
+            startMsg: "<a:gw:836913945150619688> **Giveaway** <a:gw:836913945150619688>",
+            startEmbedColor: "#a95aec",
 
-            endMsg: "🎉 **Giveaway Ended** 🎉",
-            endEmbedColor: "#000000"
+            endMsg: "<a:gw:836913945150619688> **Giveaway Ended** <a:gw:836913945150619688>",
+            endEmbedColor: "#a95aec"
         }
     },
     messages = new Enmap({
@@ -155,76 +155,41 @@ class GiveawayManager {
         let giveaway = this.giveaways.get(`giveaways_${message.guild.id}_${message.id}`)
         if (!giveaway) return;
         let passed = true
-        let reason = undefined
+        let reason = []
+        
         if (giveaway.reqGuild) {
             let guild = this.client.guilds.cache.get(giveaway.reqGuild)
             if (!guild) return;
-            let member = await guild.members.fetch(user.id)
-            if (!member) {
-                passed = false
-                reason = "guild"
-            }
 
-        } else if (giveaway.reqRole) {
+            try {
+                await guild.members.fetch(user.id)
+            } catch (e) {
+                passed = false
+                reason.push("guild")
+            }
+        }
+        if (giveaway.reqRole) {
             let guild = message.guild
             let member = await guild.members.fetch(user.id)
             if (!member.roles.cache.has(giveaway.reqRole)) {
                 passed = false
-                reason = "role"
+                reason.push("role")
             }
-        } else if (giveaway.reqMessage) {
+        }
+        if (giveaway.reqMessage) {
             let userMessages = messages.get(user.id)
 
             if (userMessages < giveaway.reqMessage) passed = false
-            reason = "messages"
+            reason.push("messages")
         }
 
         if (!passed) {
             await reaction.users.remove(user)
-            user.send(`ENTRY DENIED!\nMissing requirement: ${reason}`)
+            user.send(`ENTRY DENIED!\nMissing requirement: ${reason.join(", ")}`)
         } else {
             user.send("ENTRY ACCEPTED")
         }
     }
-async manageReaction(reaction, user) {
-        let {
-            message
-        } = reaction
-        let giveaway = this.giveaways.get(`giveaways_${message.guild.id}_${message.id}`)
-        if (!giveaway) return;
-        let passed = true
-        let reason = undefined
-        if (giveaway.reqGuild) {
-            let guild = this.client.guilds.cache.get(giveaway.reqGuild)
-            if (!guild) return;
-            let member = await guild.members.fetch(user.id)
-            if (!member) {
-                passed = false
-                reason = "guild"
-            }
-
-        } else if (giveaway.reqRole) {
-            let guild = message.guild
-            let member = await guild.members.fetch(user.id)
-            if (!member.roles.cache.has(giveaway.reqRole)) {
-                passed = false
-                reason = "role"
-            }
-        } else if (giveaway.reqMessage) {
-            let userMessages = messages.get(user.id)
-
-            if (userMessages < giveaway.reqMessage) passed = false
-            reason = "messages"
-        }
-
-        if (!passed) {
-            await reaction.users.remove(user)
-            user.send(`ENTRY DENIED!\nMissing requirement: ${reason}`)
-        } else {
-            user.send("ENTRY ACCEPTED")
-        }
-    }
-
 
     /**
      * 
@@ -293,13 +258,11 @@ async manageReaction(reaction, user) {
     endAllGiveaways(giveaways) {
         giveaways.forEach(async c => {
             if (c.ended) {
-
                 let guild = this.client.guilds.cache.get(c.guild)
                 let channel = guild.channels.cache.get(c.channel)
                 let message = await channel.messages.fetch(c.message)
 
                 await this.end(message, c)
-
             }
         })
     }
@@ -360,7 +323,7 @@ async manageReaction(reaction, user) {
                     maxAge: 0,
                     maxUses: 0
                 })
-                reqMessage += `Must join [${guild.name}](${invite.url})\n`
+                reqMessage += `<:emoji_35:817413528033296384> Must join **[${guild.name}](${invite.url})**\n`
             }
         }
 
@@ -368,16 +331,16 @@ async manageReaction(reaction, user) {
             let guild = this.client.guilds.cache.get(giveaway.guild)
             let role = guild.roles.cache.get(giveaway.reqRole)
             if (role) {
-                reqMessage += `Must have role **${role.name}**\n`
+                reqMessage += `<:emoji_35:817413528033296384> Must have role <@&${role.id}>\n`
             }
         }
 
         if (giveaway.reqMessage) {
-            reqMessage += `Must have **${giveaway.reqMessage}** messages\n`
+            reqMessage += `<:emoji_35:817413528033296384> Must have **${giveaway.reqMessage}** messages\n`
         }
 
         if (reqMessage.length === 0) {
-            reqMessage = "No requirements"
+            reqMessage = "<:emoji_35:817413528033296384> No requirements"
         }
 
         if (embedData instanceof MessageEmbed) {
@@ -412,17 +375,19 @@ async manageReaction(reaction, user) {
             return new MessageEmbed(replacedObject)
         } else {
             return new MessageEmbed({
-                title: giveaway.prize,
-                description: stripIndent(`React with ${this.options.reaction} to enter!
-                
-                Hosted by: ${giveaway.hostedMention}
-                Ends at: ${endDate}
-                Winners: ${winners}
-                
-                ${reqMessage}`),
+                title:`<a:gift:836949623221518346> ${giveaway.prize} <a:gift:836949623221518346>`,
+                description: stripIndent(`
+
+**<:emoji_35:817413528033296384> Hosted by: ${giveaway.hostedMention}
+<:emoji_35:817413528033296384> Winners: ${winners}(s)**
+
+**Requirements:**
+${reqMessage}
+
+**React with ${this.options.reaction} to enter the giveaway!**`),
                 color: this.options.embed.startEmbedColor,
                 footer: {
-                    text: `Created by: Raccoon#7867`
+                    text: `Ends at: ${endDate}`
                 }
             })
         }
@@ -449,7 +414,7 @@ async manageReaction(reaction, user) {
                     maxAge: 0,
                     maxUses: 0
                 })
-                reqMessage += `Must join [${guild.name}](${invite.url})\n`
+                reqMessage += `<:emoji_35:817413528033296384> Must join **[${guild.name}](${invite.url})**\n`
             }
         }
 
@@ -457,16 +422,16 @@ async manageReaction(reaction, user) {
             let guild = this.client.guilds.cache.get(giveaway.guild)
             let role = guild.roles.cache.get(giveaway.reqRole)
             if (role) {
-                reqMessage += `Must have role **${role.name}**\n`
+                reqMessage += `<:emoji_35:817413528033296384> Must have role <@&${role.id}>\n`
             }
         }
 
         if (giveaway.reqMessage) {
-            reqMessage += `Must have **${giveaway.reqMessage}** messages\n`
+            reqMessage += `<:emoji_35:817413528033296384> Must have **${giveaway.reqMessage}** messages\n`
         }
 
         if (reqMessage.length === 0) {
-            reqMessage = "No requirements"
+            reqMessage = "<:emoji_35:817413528033296384> No requirements"
         }
 
         if (embedData instanceof MessageEmbed) {
@@ -500,16 +465,17 @@ async manageReaction(reaction, user) {
             return new MessageEmbed(replacedObject)
         } else {
             return new MessageEmbed({
-                title: giveaway.prize,
+                title:`<a:gift:836949623221518346> ${giveaway.prize} <a:gift:836949623221518346>`,
                 description: stripIndent(`
-                Hosted by: ${giveaway.hostMention}
-                Ends at: ${endDate}
-                Winners: ${winnerMentions ? winnerMentions : "Not enough participants"}
-                
-                ${reqMessage}`),
-                color: this.endEmbedColor,
+
+**<:emoji_35:817413528033296384> Hosted by: ${giveaway.hostMention}
+<:emoji_35:817413528033296384> Winners: ${winnerMentions ? winnerMentions : "Not enough participants"}**
+**Requirements:**
+${reqMessage}`),
+
+                color: this.options.embed.startEmbedColor, 
                 footer: {
-                    text: `Created by: Raccoon#7867`
+                    text: `Ended at: ${endDate}`
                 }
             })
         }
@@ -535,5 +501,6 @@ async manageReaction(reaction, user) {
 module.exports = {
     GiveawayManager: GiveawayManager,
     giveaways: storedGiveaways,
-    reroll: rerollDB
+    reroll: rerollDB,
+    messages: messages
 }
